@@ -1,9 +1,39 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
-\usepackage{xeCJK}
+
 \usepackage{cite} % 推荐加上
 
-\title{DFA-SAGE}
+\usepackage{xeCJK}
+\setCJKmainfont{SimSun} % 设置中文字体（Mac 下宋体，可改为 SimSun, KaiTi, PingFang SC 等）
+\setmainfont{Times New Roman} % 英文正文字体
+\setsansfont{Arial}          % 英文无衬线字体
+\setmonofont{Courier New}    % 英文等宽字体
+
+% 数学公式
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{algorithm}      % 提供 algorithm 环境
+% \usepackage{algorithmic}    % 提供 algorithmic 环境（行号、\State 等）
+\usepackage{algpseudocode} % 替代 algorithmic，更现代，支持 \State、\For、\Comment
+
+% 图形与表格
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\renewcommand{\figurename}{图}
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array} % For the l{...} column type
+
+
+\usepackage{subcaption}
+
+% 页面设置
+\usepackage[margin=2.5cm]{geometry}
+\linespread{1.5} % 行距
+
+
+\title{DFA-SAGE: A Dual-Fusion Aggregation Graph Sampling and Embedding Model for Enhanced Link Prediction}
 \author{Desong Lin}
 \date{September 2025}
 
@@ -14,8 +44,6 @@
 \section{Introduction}
 
 物联网（IoT）已广泛部署于工业、医疗保健和智能家居等各类领域，为用户提供了无与伦比的便利。然而，随着物联网设备数量的持续增长，针对物联网网络的攻击也变得愈发频繁和复杂 \cite{7123563}。网络攻击者利用物联网设备固有的资源限制和安全漏洞执行恶意活动，例如分布式拒绝服务（DDoS）攻击、网络欺骗和恶意软件传播，这对用户隐私和设备可靠运行构成了重大风险，从而对物联网系统的安全性带来了显著挑战。
-
-% \cite{electronics9101565}
 
 网络入侵检测系统（Network Intrusion Detection Systems, NIDS）是防御物联网网络攻击的关键技术，它能够及时检测设备间的异常通信和未授权访问。基于特征的入侵检测系统（Signature-based IDS）通过匹配已知攻击特征实现较低的误报率，但难以检测新型攻击 \cite{electronics9101565}。相比之下，基于行为的系统能够识别未知攻击，其中机器学习技术通过构建模型分析复杂、多维数据以实现异常检测 \cite{Hazman2023} \cite{Al-Ambusaidi2024}。尤其是深度学习方法，在自动特征提取方面表现出色，并在处理高维复杂数据方面具有卓越性能 \cite{9796521} \cite{Hanafi2024} \cite{Saravanan2024}。然而，现有基于机器学习和深度学习的 NIDS 方法通常依赖于平面数据结构提取流量特征，这限制了其捕捉物联网数据中固有空间拓扑信息的能力 \cite{10258187}，从而降低了在物联网环境中的检测效果。
 
@@ -37,10 +65,333 @@
 
 2. 设计高效的双步融合聚合机制 (Dual-Fusion Aggregation)： 在消息聚合阶段，我们设计了 DFA-SAGE 的双步聚合机制：第一步强化边特征，第二步融合边和节点特征，并采用独特的自强化节点更新规则。这种机制使得通过单次 DFA-SAGE 层的聚合操作即可有效获取二跳邻域的边特征，同时缓解了多层 GNN 带来的过度平滑问题，保持了模型的计算效率。
 
-3. 验证模型的高性能和潜力： DFA-SAGE 模型在 CICIoT2023、Edge-IIoT 和 BoT-IoT 数据集上表现出色，准确率和 F1 值始终高于 98.6%，显著优于现有方法，体现了其在物联网入侵检测中的巨大潜力。
+3. 验证模型的高性能和潜力： DFA-SAGE 模型在 CICIoT2023、Edge-IIoT 和 BoT-IoT 数据集上表现出色，准确率和 F1 值始终高于 98.6\%，显著优于现有方法，体现了其在物联网入侵检测中的巨大潜力。
 
 本文结构如下：第 2 节回顾了利用图神经网络进行物联网入侵检测的相关工作；第 3 节详细介绍了数据预处理步骤，并全面说明了所提出的 EE-GraphSAGE 方法；第 4 节展示实验设置并分析实验结果；第 5 节总结研究并归纳关键发现。
 
+
+
+\section{Related Work}
+
+Haitao 等人 \cite{He2019} 设计了一种多模态序列网络入侵检测系统（NIDS），采用分层渐进网络来捕捉网络数据的不同层级特征。该方法结合了深度自编码器与 LSTM 架构，以整合相似网络连接间共享的结构信息与时间信息。该系统在三个数据集上进行了评估，包括 UNSW-NB15 数据集，在二分类实验中实现了 96.8\% 的准确率，在多分类实验中实现了 86.2\% 的准确率。
+
+在\cite{Mu2020} 中，提出了一种针对物联网网络的攻击缓解框架，结合了基于特征与基于入侵的检测系统。基于特征的模块使用黑名单源数据库，而基于入侵的模块采用极端梯度提升（XGBoost）算法。XGBoost 分类器在 BoT-IoT 数据集上实现了 99.99\% 的二分类准确率和 0.05\% 的误报率，多分类 F1 值为 97\%，准确率为 99.96\%。
+
+Sarhan\cite{Sarhan2021} 等人 将 UNSW-NB15、BoT-IoT 和 ToN-IoT 数据集从其原有格式及特征集合转换为统一的基于 Netflow 的格式，选择八个 Netflow 特征作为公共特征集。相应的新 Netflow 数据集（NF-UNSW-NB15、NF-BoT-IoT 和 NF-ToN-IoT）已公开发布。作者在这三个数据集上评估了 Extra Tree 集成分类器，在二分类任务中 F1 值分别为 0.85、0.97 和 1.00；在多分类任务中，对应 F1 值分别为 0.98、0.77 和 0.60。
+
+在\cite{Kumar2020} 中，作者针对医疗物联网（IoMT）网络提出了一种两层入侵检测模型。第一层使用决策树（DT）、朴素贝叶斯（NB）和随机森林（RF）作为第一层的独立学习器；第二层采用 XGBoost 分类器对正常与攻击实例进行识别。该集成模型在 ToN-IoT 数据集上的二分类准确率为 96.35%，F1 值为 0.95。
+
+Churcher 等人 \cite{s21020446} 应用了多种机器学习算法，包括 K 最近邻（KNN）、决策树（DT）、支持向量机（SVM）、朴素贝叶斯（NB）、随机森林（RF）、人工神经网络（ANN）以及逻辑回归（LR）进行网络入侵检测。作者在 BoT-IoT 数据集上评估了不同分类器的性能，结果显示 KNN 分类器在多分类任务中表现最佳，F1 值为 0.99，分类准确率为 99.00%。
+
+Xiao 等人 \cite{Xiao2020}  提出了一种基于图嵌入的方法对网络流进行入侵检测。作者首先将网络流转换为一阶图和二阶图。一阶图从单个主机的角度，通过 IP 地址和端口号学习潜在特征；二阶图则从全局角度，通过源 IP、源端口、目标 IP 以及目标端口学习潜在特征。提取的图嵌入与原始特征结合后，用于训练随机森林分类器进行网络攻击检测。
+
+然而，该方法的一个显著局限在于使用了传统的传递性图嵌入方法 \cite{hamilton2018inductiverepresentationlearninglarge}，这限制了其对训练阶段未见过的图节点（如新的 IP 地址和端口号）样本的分类能力，因此不适用于大多数实际 NIDS 场景。*相比之下，本文提出的 E-GraphSAGE 方法采用归纳学习（inductive learning）策略，不存在上述限制*。
+
+Zhou 等人 \cite{zhou2020automatingbotnetdetectiongraph}  提出使用图卷积神经网络（GCN）进行 P2P 僵尸网络节点检测。作者首先生成混合了真实大规模网络流量的僵尸网络流量，然后应用 GCN 进行节点分类。所生成的图不包含任何流或节点特征，该方法仅考虑网络连通性图的拓扑信息进行 P2P 僵尸网络节点分类，而非流分类。这限制了对僵尸网络攻击的检测，并未关注其他网络攻击（如 XSS 和勒索软件攻击），也未充分利用网络流数据中的所有信息，即网络流特征。
+
+尽管一些现有图表示学习方法已经考虑了边特征，但没有一种可以直接应用于网络入侵检测。方法如 \cite{gong2019exploitingedgefeaturesgraph} \cite{gilmer2017neuralmessagepassingquantum} 考虑了边特征，但仅用于提升节点表示以提高性能，而非进行边分类（NIDS 的目标）。
+
+与相关研究相比，我们的方法利用了可从网络流数据中提取的边特征，这对于通过边嵌入方法检测单独攻击流至关重要。基于传统（非图）机器学习算法的 NIDS 尚未充分利用网络流数据中固有的结构和拓扑信息来检测复杂网络攻击（如僵尸网络攻击），而这是 GNN 的关键优势。本文提出的 E-GraphSAGE 的核心创新点在于其同时利用网络流数据中的拓扑信息和边特征。此外，相关研究在 NIDS 的评估中通常仅使用 1-3 个基准数据集，而本文的方法使用了四个不同的基准数据集，提供了更高的可靠性，并验证了方法在不同网络场景下的泛化能力。
+
+\section{Background}
+
+\subsection{Graph Neural Network (GNN)}
+
+GNN 是机器学习中最新的和发展最快的子领域之一。 它的强大和潜力在于它能够利用在现实世界应用领域中遇到的许多数据的固有图结构，例如社交媒体网络、生物学、电信等。 图格式通过对一组对象及其关系进行建模来捕获结构信息。 对象由图节点表示，它们的关系由图边表示。 在计算机网络的情况下，单个主机 (IP 地址) 被建模为图节点，主机之间的通信，即网络流，被建模为图边。
+
+使用 GNN 用于 NIDS 的主要动机是能够轻松直接地利用网络流数据中丰富的结构信息，这些信息可以直接编码在图格式中。 虽然一些传统的基于 ML 的方法试图使用图数据，但这通常非常繁琐，并且依赖于手工设计的特征。
+
+GNN 执行的常见任务是生成节点 嵌入 \cite{cai2018comprehensivesurveygraphembedding}，其目标是将节点编码为低维向量，同时保持它们在原始格式中的关键关系和图位置。 节点嵌入通常是应用于下游任务（例如节点分类和节点聚类）的关键前奏 \cite{cai2018comprehensivesurveygraphembedding}。 GNN 最近因其令人信服的性能和通过可视化节点 嵌入 \cite{zhou2021graphneuralnetworksreview} 获得的结果的高度可解释性而受到广泛关注。
+
+\subsection{GraphSAGE}
+
+Graph Sample and AggreGatE（GraphSAGE）算法是最著名的图神经网络（GNN）之一，由 Hamilton 等人提出 \cite{hamilton2018inductiverepresentationlearninglarge}，这限制了其对训练阶段未见过的图节点（如新的 。在 GraphSAGE 中，会对邻居节点进行固定大小的（均匀随机）采样。这种方式可以限制算法的空间和时间复杂度，使其不依赖于图结构（例如节点度分布）和批处理大小。
+
+GraphSAGE 算法运行在一个图$\mathcal{G(V, E)}$上，其中 $\mathcal{V}$ 是节点集合，$\mathcal{E}$ 是边集合。节点 $v$ 的特征向量表示为 $x_v$，所有节点特征向量的集合表示为 $\{x_v, \forall v \in V\}$。
+
+GraphSAGE 的一个关键超参数是 \textit{图卷积层数 K}，它决定了在每次迭代中，节点信息聚合所能传播的跳数。另一个重要的方面是选择一个可微分的聚合函数$AGG_k,\forall k \in \{1,\cdots,K\}$，用于从邻居节点聚合信息。
+
+该算法包括前向传播和反向传播两个阶段，下面进行更详细的说明。
+
+类似于卷积神经网络（CNN）中的卷积操作，GraphSAGE 会收集节点局部邻域的信息，并用来计算节点嵌入。GraphSAGE 假设模型已经训练完成，即权重矩阵和聚合函数参数是固定的。
+对于每个节点，算法会迭代地从节点的邻居、邻居的邻居，依次向外采样并聚合信息。
+在每一层迭代中，首先会对节点的邻域进行采样，然后将采样节点的信息聚合成一个向量。在第 $k$ 层时，节点 $v$ 的邻域 $N_v$ 的聚合信息 $h_{N(v)}^k$ 可表示为公式 \eqref{eq:node-embedding-aggregation} \cite{Kumar2020}：
+
+\begin{equation}
+ h_{N(v)}^k=AGG_k (\{h_u^{k-1},\forall u \in N(v)\})
+ \label{eq:node-embedding-aggregation}
+\end{equation}
+
+其中，$h_u^{k-1}$ 表示节点 $u$ 在上一层的嵌入。这些邻居节点的嵌入会被聚合到节点 $v$ 在第 $k$ 层的嵌入中。
+
+这个聚合过程如图\ref{fig:graph-aggration}所示，展示了从每个节点的 $k$-跳邻域收集并聚合的图拓扑信息和节点特征。
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\linewidth]{images/graph-aggration.png}
+    \caption{GraphSAGE 类型的消息传递和聚合机制示意图。 左侧为输入图，右侧展示了目标节点 A 如何通过聚合其一跳邻居 B、C、D 汇集的消息来更新其特征。该流程揭示了信息从二跳邻域向中心节点 A 的流动过程}
+    \label{fig:graph-aggration}
+\end{figure}
+
+在 GraphSAGE 模型中，可以使用不同的聚合方法，包括均值（mean）、池化（pooling）或者不同类型的神经网络，例如长短期记忆网络（LSTM）\cite{hamilton2018inductiverepresentationlearninglarge}。
+
+采样邻域的聚合嵌入 $h_{N(v)}^k$ 会与节点在上一层的嵌入 $h_v^{k-1}$ 进行拼接（concatenate）。然后，将模型的可训练参数 $W^k$（可训练权重矩阵）作用于拼接结果，并通过非线性激活函数 $\sigma$（例如 ReLU），即可计算第 $k$ 层节点 $v$ 的嵌入，公式如下 \cite{hamilton2018inductiverepresentationlearninglarge}：
+
+\begin{equation}
+ h_v^k=\sigma ( W_k \cdot CONCAT (h_v^{k-1},h_{N(v)}^k) )
+\end{equation}
+
+节点 $v$ 的最终表示（嵌入）记为$z_v$，即第 K 层节点的嵌入，如\eqref{eq:final-node-embedding} 所示。对于节点分类任务，$z_v$ 可以再通过 sigmoid 或 softmax 层进行输出。
+
+\begin{equation}
+ z_v=h_v^K, \forall \in V
+ \label{eq:final-node-embedding}
+\end{equation}
+\section{Methodology}
+
+\subsection{Dual-Fusion Aggregation SAGE (DFA-SAGE) Model}
+
+为解决传统 GNNs 在物联网（IoT）入侵检测中节点特征无效和边特征融合不足的问题，本文提出了 \textbf{Dual-Fusion Aggregation SAGE (DFA-SAGE)} 模型。DFA-SAGE 在 GraphSAGE 的基础上引入了\textbf{双步聚合机制}和\textbf{自强化更新函数}，以深度融合节点和边特征，并强化特征的表达能力。模型的整体结构、算法流程、以及核心组件的细节详述如下。
+
+\begin{algorithm}
+\caption{Dual-Fusion Aggregation SAGE (DFA-SAGE)}
+\label{alg:dfa-sage}
+\begin{algorithmic}[1]
+\Require Graph $\mathcal{G}(\mathcal{V}, \mathcal{E})$ \Comment{节点和边集合}
+\Require Input features $\mathbf{X}_{\mathcal{V}}$ \Comment{节点特征}
+\Ensure Edge scores $\mathbf{Y}_{\mathcal{E}}$ \Comment{每条边分类概率}
+
+\State $\mathbf{h}_v^{0} \leftarrow \mathbf{x}_v, \quad \forall v \in \mathcal{V}$ \Comment{节点初始化（全一向量）}
+\For{$k=1$ to $K$} \Comment{GNN 迭代}
+    \State // \textbf{第一步：边特征强化 (Edge Feature Reinforcement)}
+    \For{$v \in \mathcal{V}$ do}
+        \State $\mathbf{m}_{vu}^{(1)} \leftarrow \sigma(\mathbf{W}_{1} \cdot \mathbf{e}_{uv}), \quad \forall u \in \mathcal{N}(v)$
+        \State $\mathbf{h}_v' \leftarrow \sigma(\text{AGG}(\{\mathbf{m}_{vu}^{(1)}\})) $ \Comment{更新节点特征 $\mathbf{h}'$}
+    \EndFor
+    
+    \State // \textbf{第二步：节点-边混合融合与自强化更新}
+    \For{$v \in \mathcal{V}$ do}
+        \State $\mathbf{h}_{\mathcal{N}(v)} \leftarrow \text{AGG}(\{\sigma(\mathbf{W}_{msg} \cdot \text{CONCAT}(\mathbf{h}_u', \mathbf{e}_{uv})) \mid u \in \mathcal{N}(v)\})$
+        \State $\mathbf{h}_v^k \leftarrow \sigma(\mathbf{W}_{apply} \cdot (\mathbf{h}_{\mathcal{N}(v)} + \mathbf{h}_{\mathcal{N}(v)}))$ \Comment{核心：邻居特征自强化}
+    \EndFor
+\EndFor
+
+\State // \textbf{边预测 (Edge Prediction)}
+\For{$uv \in \mathcal{E}$ do}
+    \State $\mathbf{e}'_{uv} \leftarrow \sigma(\mathbf{W}_{edge} \cdot \mathbf{e}_{uv})$
+    \State $\mathbf{z}_{node} \leftarrow 10 \cdot (\mathbf{h}_u^K + \mathbf{h}_v^K)$ \Comment{核心：特征缩放和相加}
+    \State $\mathbf{z}_{uv} \leftarrow \text{CONCAT}(\mathbf{z}_{node}, \mathbf{e}'_{uv})$
+    \State $\mathbf{y}_{uv} \leftarrow \text{Softmax}(\mathbf{W}_{pred} \cdot \mathbf{z}_{uv} + \mathbf{b})$
+\EndFor
+
+\State \textbf{return} $\mathbf{Y}_{\mathcal{E}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Graph Construction and Initial Feature Mapping}
+% 此处描述了数据的输入和初始化，对应了代码中的输入维度设定。
+
+图 $\mathcal{G}(\mathcal{V}, \mathcal{E})$ 由网络地址作为节点（$\mathcal{V}$）和网络连接作为边（$\mathcal{E}$）构建。初始的节点特征 $\mathbf{h}_v^{(0)}$ 被设置为一个与边特征维度对齐的\textbf{全一向量}（作为后续 \textbf{基于边特征的初始化} 的占位符），即 $\mathbf{h}_v^{(0)} \in \mathbb{R}^{d_{e}}$。边特征 $\mathbf{e}_{uv}$ 包含原始流量属性。根据代码（$d_{e}=13$），所有节点和边的初始特征维度保持一致。
+
+\subsubsection{DFA-SAGE Architecture} 
+% 新增部分：模型总览，对应代码中的 Model 类。
+
+DFA-SAGE 的整体架构采用典型的 GNN-Predictor 范式，由 \textbf{Dual-Fusion Aggregation (DFA) Layer} 和 \textbf{Feature Scaling Edge Classifier} 两个核心模块串联而成。DFA Layer (对应代码中的 \texttt{SAGE} 模块) 负责通过双步消息传递学习增强的节点嵌入 $\mathbf{h}_v^K$。随后，Feature Scaling Edge Classifier (对应代码中的 \texttt{FullyConnectedPredictor} 模块) 使用这些嵌入进行最终的边分类。模型的整体信息流如 **图 1** 所示。
+
+
+
+
+% 建议在此处放置图 1 的占位符，展示整个模型的端到端架构（输入 -> GNN -> Classifier -> 输出）。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{images/DFA-SAGE-architecture.png}
+    \caption{DFA-SAGE 整体架构图。}
+    \label{fig:overall_architecture}
+\end{figure}
+
+\subsubsection{Dual-Fusion Aggregation Layer (DFA Layer)}
+% 此处描述了 GNN 核心组件 SAGELayer 的逻辑。
+
+DFA-SAGE 的核心在于其\textbf{单层双步聚合}设计（对应代码中的 \texttt{SAGELayer}），这使其在不增加网络深度的情况下，实现对边特征的深度提取和融合。在第 $k$ 层迭代中，聚合过程分为两个连续步骤：
+
+\paragraph{Edge Feature Reinforcement}
+
+该步骤旨在利用纯边特征 $\mathbf{e}_{uv}$ 生成一个强化后的边上下文信息，并更新节点特征。这确保了节点特征 $\mathbf{h}_v^{(k)}$ 在随后的聚合中，起始就融入了高质量的局部边信息。
+
+\textbf{消息函数 $\phi_1$ 和更新 $\gamma_1$：}
+$$
+\mathbf{m}_{vu}^{(1)} = \sigma \left( \mathbf{W}_{1} \cdot \mathbf{e}_{uv} \right)
+$$
+\begin{equation}
+\mathbf{h}_v' = \sigma \left( \underset{u \in \mathcal{N}(v)}{\text{AGG}} (\mathbf{m}_{vu}^{(1)}) \right)
+\end{equation}
+
+其中 $\mathbf{W}_{1}$ 是可训练的线性矩阵，负责将边特征投影到消息空间。$\mathbf{h}_v'$ 是第一次聚合后的节点特征，它将作为第二次聚合中节点 $\mathbf{h}_v$ 的输入。
+
+\paragraph{Node-Edge Hybrid Fusion with Self-Reinforcement}
+
+该步骤执行最终的消息聚合，将第一次更新的节点特征 $\mathbf{h}_u'$ 与原始边特征 $\mathbf{e}_{uv}$ 融合，并采用独特的\textbf{自强化更新函数}。
+
+\textbf{消息函数 $\phi_2$：}
+$$
+\mathbf{m}_{vu}^{(2)} = \sigma \left( \mathbf{W}_{msg} \cdot \text{CONCAT}(\mathbf{h}_u', \mathbf{e}_{uv}) \right)
+$$
+
+\textbf{自强化更新 $\gamma_2$：}
+聚合的邻居信息 $\mathbf{h}_{\mathcal{N}(v)}$ 可表示为：
+$$
+\mathbf{h}_{\mathcal{N}(v)} = \underset{u \in \mathcal{N}(v)}{\text{AGG}} (\mathbf{m}_{vu}^{(2)})
+$$
+
+最终的节点嵌入 $\mathbf{h}_v^{(k)}$ 通过自强化机制计算，如公式 \eqref{eq:dfasage-update} 所示：
+\begin{equation}
+\mathbf{h}_v^{(k)} = \sigma \left( \mathbf{W}_{apply} \cdot (\mathbf{h}_{\mathcal{N}(v)} + \mathbf{h}_{\mathcal{N}(v)}) \right)
+\label{eq:dfasage-update}
+\end{equation}
+
+其中，$\mathbf{W}_{msg}$ 和 $\mathbf{W}_{apply}$ 均为可训练权重矩阵。这里的 $\mathbf{h}_{\mathcal{N}(v)} + \mathbf{h}_{\mathcal{N}(v)}$ 是一种\textbf{邻居特征自强化（Self-Reinforcement）}操作，旨在通过放大邻居信息的影响，加速特征的学习和传播，有效增强浅层 GNN 的特征表达能力。
+
+% 建议在此处放置图 2 的占位符，展示 DFA Layer 内部的双步聚合过程和自强化机制。
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=\textwidth]{dfa_layer_internal.png}
+%     \caption{DFA Layer 内部双步聚合机制图。}
+%     \label{fig:dfa_layer_internal}
+% \end{figure}
+
+\subsubsection{Feature Scaling Edge Classifier}
+% 此处描述了预测器 FullyConnectedPredictor 的逻辑。
+
+DFA-SAGE 专注于边分类任务。它采用一个全连接预测器 $\text{PRED}(\cdot)$，在最终分类之前执行非标准的特征缩放操作，以突出节点特征的重要性。
+
+首先，对原始边特征 $\mathbf{e}_{uv}$ 进行线性转换，得到 $\mathbf{e}'_{uv}$：
+\begin{equation}
+\mathbf{e}'_{uv} = \sigma(\mathbf{W}_{edge} \cdot \mathbf{e}_{uv})
+\end{equation}
+
+然后，将最终节点嵌入 $\mathbf{h}_u^{(k)}$ 和 $\mathbf{h}_v^{(k)}$ 通过\textbf{特征缩放和相加}进行组合，并与 $\mathbf{e}'_{uv}$ 拼接，如公式 \eqref{eq:dfasage-prediction} 所示：
+
+\begin{equation}
+\mathbf{z}_{uv} = \text{CONCAT} \left( 10 \cdot (\mathbf{h}_u^{(k)} + \mathbf{h}_v^{(k)}), \quad \mathbf{e}'_{uv} \right)
+\label{eq:dfasage-prediction}
+\end{equation}
+
+缩放因子 $10$ 旨在为 GNN 学习到的节点信息赋予更高的权重，以平衡可能过度依赖原始边特征的问题。最终的边分类分数 $\mathbf{y}_{uv}$ 通过 Softmax 函数输出：
+$$
+\mathbf{y}_{uv} = \text{Softmax} \left( \mathbf{W}_{pred} \cdot \mathbf{z}_{uv} + \mathbf{b} \right)
+$$
+其中 $\mathbf{y}_{uv}$ 即为该网络连接属于各个入侵类别的概率分布。
+
+\section{Experiments}
+
+\subsection{数据集}
+
+本研究使用的实验数据集包括以下内容：
+
+\begin{itemize}
+    \item \textbf{CICIoT2023 \cite{202305.0443}}：该数据集由加拿大网络安全研究所 (CIC) 提出，是一个针对大规模攻击的实时物联网 (IoT) 数据集，包含七类攻击和正常流量的 PCAP 文件。由于硬件限制，本研究从原始 548~GB PCAP 文件中选择了部分数据作为实验数据集。采样依据原始数据集中各类别的比例进行，为解决少数类别样本不足的问题（例如 Recon 类），适当提高了其采样比例。最终，实验数据集中选取了 449,094 条记录。
+
+    \item \textbf{Edge-IIoT \cite{9751703}}：该数据由十余种 IoT 设备生成，包含与 IoT 和 IIoT 协议相关的 14 种攻击类型。
+
+    \item \textbf{BoT-IoT \cite{KORONIOTIS2019779}}：Koroniotis 等人 (2019) 构建的数据集，主要用于物联网相关研究。数据集包含六类攻击以及 47 个特征，并附有对应的类别标签。
+\end{itemize}
+
+各数据集的主要特征如表~\ref{tab:dataset_classes} 所示。
+
+\subsection{实验设置}
+
+\subsubsection{实验环境与参数}
+本实验在以下硬件与软件环境下进行：
+\begin{itemize}
+    \item 处理器：Intel Core i9-14900K
+    \item 显卡：NVIDIA GeForce RTX 4060 Ti，16~GB 显存
+    \item 内存：16~GB
+    \item 操作系统：Windows~10
+    \item 编程语言与框架：Python 3.10，PyTorch 2.4.0（在 \texttt{pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime} Docker 镜像下）
+    \item 优化器：Adam，用于训练神经网络，加速收敛到全局最优解
+    \item 模型训练相关参数：表~\ref{tab:dfasage_parameters} 列出了详细参数设置
+\end{itemize}
+
+\subsubsection{评估指标}
+本文采用以下指标对模型的性能进行全面评估：
+\begin{itemize}
+    \item \textbf{准确率 (Accuracy, ACC)}：衡量分类正确的样本占总样本的比例
+    \item \textbf{精确率 (Precision, $P_c$)}：衡量模型预测为正类的样本中，实际为正类的比例
+    \item \textbf{召回率 (Recall, $R_c$)}：衡量实际为正类的样本中，被正确预测为正类的比例
+    \item \textbf{F1 分数 (F1-score, $F1_c$)}：精确率和召回率的调和平均，用于综合评估模型性能
+\end{itemize}
+
+其数学表达式如下：
+\begin{align}
+\text{准确率 (ACC)} &= \frac{TP + TN}{N} \label{eq:accuracy} \\
+\text{精确率 (P}_c\text{)} &= \frac{TP_c}{TP_c + FP_c} \label{eq:precision} \\
+\text{召回率 (R}_c\text{)} &= \frac{TP_c}{TP_c + FN_c} \label{eq:recall} \\
+\text{F1 分数 (F1}_c\text{)} &= 2 \cdot \frac{P_c \cdot R_c}{P_c + R_c} \label{eq:f1score}
+\end{align}
+
+其中，$TP$、$TN$ 分别表示正类和负类预测正确的样本数，$FP$、$FN$ 分别表示误判的样本数，$N$ 为总样本数。
+
+\begin{table}[H]
+\centering
+\caption{Number of the classes of the selected datasets}
+\label{tab:dataset_classes}
+\begin{tabular}{l c r l c r}
+\toprule % 顶线
+\textbf{Dataset} & \textbf{Attack} & \textbf{Count} & \textbf{Dataset} & \textbf{Attack} & \textbf{Count} \\
+\midrule % 表头线
+
+% --- CICIoT2023 (8行) & Edge-IIoT (14行) 开始 ---
+\multirow{8}{*}{\centering CICIoT2023} & DoS & 96,992 & \multirow{14}{*}{\centering Edge-IIoT} & Normal & 20,111 \\
+& DDoS & 77,776 & & DDoS\_ICMP & 14,090 \\
+& Benign & 65,448 & & DDoS\_HTTP & 10,560 \\
+& Spoofing & 58,825 & & SQL\_injection & 10,297 \\
+& Mirai & 55,736 & & Uploading & 10,261 \\
+& BurteForce & 38,376 & & DDoS\_TCP & 10,247 \\
+& Web-based & 36,178 & & Vulnerability\_scanner & 10,062 \\
+& Recon & 19,763 & & Password & 9,976 \\
+% --- CICIoT2023 结束 / BoT-IoT (5行) 开始 ---
+% Edge-IIoT 的 multirow 仍在继续
+\multirow{5}{*}{\centering BoT-IoT} & DDoS & 534,494 & & Backdoor & 9,917 \\
+& Reconnaissance & 91,082 & & Ransomware & 9,886 \\
+& DoS & 42,390 & & XSS & 9,702 \\
+& Normal & 477 & & Port\_Scanning & 8,992 \\
+& Theft & 79 & & DDoS\_UDP & 1,402 \\
+% --- 补齐 Edge-IIoT 的最后一行 ---
+% \cline{5-6} % 使用 cline 来创建一条 Edge-IIoT 和 BoT-IoT 分隔线（可选，如果想保持简洁，可以去掉）
+% 为了保持 BoT-IoT 和 Edge-IIoT 行数对齐，这里需要一个额外的空行来放置 Edge-IIoT 的最后一行数据
+& & & & Fingerprinting & 869 \\
+\bottomrule % 底线
+\end{tabular}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\caption{DFA-SAGE 模型关键参数与维度 (Key Parameters and Dimensions of the DFA-SAGE Model)}
+\label{tab:dfasage_parameters_booktabs}
+\begin{tabular}{lcc}
+\toprule % 顶线
+\textbf{模块 (Module)} & \textbf{参数 (Parameter)} & \textbf{维度/值 (Value)} \\
+\midrule % 表头线
+\textbf{输入特征 (Input Features)} & 原始边特征 ($\mathbf{e}_{uv}$) 维度 & $d_e=13$ \\
+& 初始节点特征 ($\mathbf{h}_v^0$) 维度 & $d_{e}=13$ (全一向量) \\
+% \addlinespace % 增加小间距代替细横线
+\midrule % 表头线
+\textbf{DFA Layer (SAGELayer)} & 第一次聚合输出维度 & $d_{out}=128$ \\
+& 第二次聚合输入 (Concat) 维度 & $128 + 13 = 141$ \\
+& GNN 嵌入维度 ($\mathbf{h}_v^K$) & $128$ \\
+& 消息聚合次数 ($K$) & $1$ \\
+% \addlinespace % 增加小间距代替细横线
+\midrule % 表头线
+\textbf{特征缩放分类器 (Predictor)} & 节点特征输入维度 & $128$ \\
+& 转换边特征 ($\mathbf{e}'_{uv}$) 维度 & $128$ \\
+& 最终拼接 ($\mathbf{z}_{uv}$) 维度 & $128 + 128 = 256$ \\
+& 节点特征缩放因子 & $10$ \\
+& 输出类别数 & $\text{Num\_Classes}$ \\
+\bottomrule % 底线
+\end{tabular}
+\end{table}
 
 \bibliographystyle{IEEEtran}   % 或 plain, unsrt, alpha...
 \bibliography{ref}             % ref.bib
