@@ -49,7 +49,7 @@
 
 随着图神经网络（Graph Neural Networks, GNNs）的出现，越来越多的研究将其引入入侵检测领域 \cite{ZHONG2024103821}。GNN 主要通过信息聚合和节点更新学习节点和图的特征表示，从而能够有效建模复杂的网络结构，并捕捉图中节点间的关系。这使得 GNN 在物联网环境中具有明显优势 \cite{sanchez-lengeling2021a}。例如，GCN-Ensemble 融合模型 \cite{Mittal2024} 将流量数据转化为图结构，并整合卷积神经网络集成进行分类。这一方法有效解决了物联网入侵检测中数据不平衡和拓扑信息不足的问题，在多个数据集上取得了优异性能。在基于 GNN 的研究中，常用的图构建方法是将流量数据中的源地址和目标地址映射为图节点，而将网络流特征映射为边。然而，该方法将 IP 地址中包含的空间拓扑信息转化为图的拓扑结构，使节点本身缺乏内在特征。一些研究通过将节点特征初始化为元素全为 1 的向量，但这些特征仍缺乏区分性。此外，尽管 GNN 擅长捕捉流量数据中的复杂关系，许多方法仍主要关注节点特征的聚合与表示学习，或仅在图构建和基本权重调整阶段使用边特征。这种方法忽视了边特征在反映流量模式和捕捉攻击行为中的潜力，未能充分发挥其在图结构学习中的作用。
 
-为了应对物联网（IoT）入侵检测的挑战，本文提出了用于物联网入侵检测的 Dual-Fusion Aggregation SAGE (DFA-SAGE) 模型。
+为了应对物联网（IoT）入侵检测的挑战，本文提出了用于物联网入侵检测的 Dual-Fusion Aggregation GraphSAGE (DFA-SAGE) 模型。
 
 在图构建阶段，我们引入了一种基于邻近边特征聚合的节点初始化方法，利用邻接边的信息为每个节点提供独特的特征，从而增强其表达能力，克服传统方法中节点特征无效的问题。
 
@@ -65,9 +65,9 @@
 
 2. 设计高效的双步融合聚合机制 (Dual-Fusion Aggregation)： 在消息聚合阶段，我们设计了 DFA-SAGE 的双步聚合机制：第一步强化边特征，第二步融合边和节点特征，并采用独特的自强化节点更新规则。这种机制使得通过单次 DFA-SAGE 层的聚合操作即可有效获取二跳邻域的边特征，同时缓解了多层 GNN 带来的过度平滑问题，保持了模型的计算效率。
 
-3. 验证模型的高性能和潜力： DFA-SAGE 模型在 CICIoT2023、Edge-IIoT 和 BoT-IoT 数据集上表现出色，准确率和 F1 值始终高于 98.6\%，显著优于现有方法，体现了其在物联网入侵检测中的巨大潜力。
+3. 验证模型的高性能和潜力： DFA-GraphSAGE 模型在 CICIoT2023、Edge-IIoT 和 BoT-IoT 数据集上表现出色，准确率和 F1 值始终高于 98.6\%，显著优于现有方法，体现了其在物联网入侵检测中的巨大潜力。
 
-本文结构如下：第 2 节回顾了利用图神经网络进行物联网入侵检测的相关工作；第 3 节详细介绍了数据预处理步骤，并全面说明了所提出的 EE-GraphSAGE 方法；第 4 节展示实验设置并分析实验结果；第 5 节总结研究并归纳关键发现。
+本文结构如下：第 2 节回顾了利用图神经网络进行物联网入侵检测的相关工作；第 3 节详细介绍了相关的图神经网络的研究背景，并介绍了 GraphSAGE 方法；第 4 节全面说明了所提出的 DFA-GraphSAGE 方法；第 4 节展示实验设置并分析实验结果；第 5 节总结研究并归纳关键发现。
 
 
 
@@ -152,10 +152,34 @@ GraphSAGE 的一个关键超参数是 \textit{图卷积层数 K}，它决定了�
 
 \subsection{Dual-Fusion Aggregation SAGE (DFA-SAGE) Model}
 
-为解决传统 GNNs 在物联网（IoT）入侵检测中节点特征无效和边特征融合不足的问题，本文提出了 \textbf{Dual-Fusion Aggregation SAGE (DFA-SAGE)} 模型。DFA-SAGE 在 GraphSAGE 的基础上引入了\textbf{双步聚合机制}和\textbf{自强化更新函数}，以深度融合节点和边特征，并强化特征的表达能力。模型的整体结构、算法流程、以及核心组件的细节详述如下。
+为解决传统 GNNs 在物联网（IoT）入侵检测中节点特征无效和边特征融合不足的问题，本文提出了 \textbf{Dual-Fusion Aggregation GraphSAGE (DFA-GraphSAGE)} 模型。DFA-GraphSAGE 在 GraphSAGE 的基础上引入了\textbf{双步聚合机制}和\textbf{自强化更新函数}，以深度融合节点和边特征，并强化特征的表达能力。模型的整体结构、算法流程、以及核心组件的细节详述如下。
+
+
+\subsubsection{Graph Construction and Initial Feature Mapping}
+% 此处描述了数据的输入和初始化，对应了代码中的输入维度设定。
+
+图 $\mathcal{G}(\mathcal{V}, \mathcal{E})$ 由网络地址作为节点（$\mathcal{V}$）和网络连接作为边（$\mathcal{E}$）构建。初始的节点特征 $\mathbf{h}_v^{(0)}$ 被设置为一个与边特征维度对齐的\textbf{全一向量}（作为后续 \textbf{基于边特征的初始化} 的占位符），即 $\mathbf{h}_v^{(0)} \in \mathbb{R}^{d_{e}}$。边特征 $\mathbf{e}_{uv}$ 包含原始流量属性。根据代码（$d_{e}$），所有节点和边的初始特征维度保持一致。
+
+\subsubsection{DFA-GraphSAGE Architecture} 
+% 新增部分：模型总览，对应代码中的 Model 类。
+
+DFA-SAGE 的整体架构采用典型的 GNN-Predictor 范式，由 \textbf{Dual-Fusion Aggregation (DFA) Layer} 和 \textbf{Feature Scaling Edge Classifier} 两个核心模块串联而成。DFA Layer (对应代码中的 \texttt{SAGE} 模块) 负责通过双步消息传递学习增强的节点嵌入 $\mathbf{h}_v^K$。随后，Feature Scaling Edge Classifier (对应代码中的 \texttt{FullyConnectedPredictor} 模块) 使用这些嵌入进行最终的边分类。模型的整体信息流如图 \ref{fig:overall_architecture} 所示。
+
+% 建议在此处放置图 1 的占位符，展示整个模型的端到端架构（输入 -> GNN -> Classifier -> 输出）。
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/DFA-SAGE-architecture.png}
+    \caption{DFA-SAGE 整体架构图。}
+    \label{fig:overall_architecture}
+\end{figure}
+
+\subsubsection{Dual-Fusion Aggregation Layer (DFA Layer)}
+% 此处描述了 GNN 核心组件 SAGELayer 的逻辑。
+
+DFA-SAGE 的核心在于其\textbf{单层双步聚合}设计（对应代码中的 \texttt{SAGELayer}），这使其在不增加网络深度的情况下，实现对边特征的深度提取和融合。在第 $k$ 层迭代中，聚合过程分为两个连续步骤：
 
 \begin{algorithm}
-\caption{Dual-Fusion Aggregation SAGE (DFA-SAGE)}
+\caption{Dual-Fusion Aggregation GraphSAGE (DFA-GraphSAGE)}
 \label{alg:dfa-sage}
 \begin{algorithmic}[1]
 \Require Graph $\mathcal{G}(\mathcal{V}, \mathcal{E})$ \Comment{节点和边集合}
@@ -188,32 +212,6 @@ GraphSAGE 的一个关键超参数是 \textit{图卷积层数 K}，它决定了�
 \State \textbf{return} $\mathbf{Y}_{\mathcal{E}}$
 \end{algorithmic}
 \end{algorithm}
-
-\subsubsection{Graph Construction and Initial Feature Mapping}
-% 此处描述了数据的输入和初始化，对应了代码中的输入维度设定。
-
-图 $\mathcal{G}(\mathcal{V}, \mathcal{E})$ 由网络地址作为节点（$\mathcal{V}$）和网络连接作为边（$\mathcal{E}$）构建。初始的节点特征 $\mathbf{h}_v^{(0)}$ 被设置为一个与边特征维度对齐的\textbf{全一向量}（作为后续 \textbf{基于边特征的初始化} 的占位符），即 $\mathbf{h}_v^{(0)} \in \mathbb{R}^{d_{e}}$。边特征 $\mathbf{e}_{uv}$ 包含原始流量属性。根据代码（$d_{e}=13$），所有节点和边的初始特征维度保持一致。
-
-\subsubsection{DFA-SAGE Architecture} 
-% 新增部分：模型总览，对应代码中的 Model 类。
-
-DFA-SAGE 的整体架构采用典型的 GNN-Predictor 范式，由 \textbf{Dual-Fusion Aggregation (DFA) Layer} 和 \textbf{Feature Scaling Edge Classifier} 两个核心模块串联而成。DFA Layer (对应代码中的 \texttt{SAGE} 模块) 负责通过双步消息传递学习增强的节点嵌入 $\mathbf{h}_v^K$。随后，Feature Scaling Edge Classifier (对应代码中的 \texttt{FullyConnectedPredictor} 模块) 使用这些嵌入进行最终的边分类。模型的整体信息流如 **图 1** 所示。
-
-
-
-
-% 建议在此处放置图 1 的占位符，展示整个模型的端到端架构（输入 -> GNN -> Classifier -> 输出）。
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\textwidth]{images/DFA-SAGE-architecture.png}
-    \caption{DFA-SAGE 整体架构图。}
-    \label{fig:overall_architecture}
-\end{figure}
-
-\subsubsection{Dual-Fusion Aggregation Layer (DFA Layer)}
-% 此处描述了 GNN 核心组件 SAGELayer 的逻辑。
-
-DFA-SAGE 的核心在于其\textbf{单层双步聚合}设计（对应代码中的 \texttt{SAGELayer}），这使其在不增加网络深度的情况下，实现对边特征的深度提取和融合。在第 $k$ 层迭代中，聚合过程分为两个连续步骤：
 
 \paragraph{Edge Feature Reinforcement}
 
@@ -299,39 +297,6 @@ $$
 
 各数据集的主要特征如表~\ref{tab:dataset_classes} 所示。
 
-\subsection{实验设置}
-
-\subsubsection{实验环境与参数}
-本实验在以下硬件与软件环境下进行：
-\begin{itemize}
-    \item 处理器：Intel Core i9-14900K
-    \item 显卡：NVIDIA GeForce RTX 4060 Ti，16~GB 显存
-    \item 内存：16~GB
-    \item 操作系统：Windows~10
-    \item 编程语言与框架：Python 3.10，PyTorch 2.4.0（在 \texttt{pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime} Docker 镜像下）
-    \item 优化器：Adam，用于训练神经网络，加速收敛到全局最优解
-    \item 模型训练相关参数：表~\ref{tab:dfasage_parameters} 列出了详细参数设置
-\end{itemize}
-
-\subsubsection{评估指标}
-本文采用以下指标对模型的性能进行全面评估：
-\begin{itemize}
-    \item \textbf{准确率 (Accuracy, ACC)}：衡量分类正确的样本占总样本的比例
-    \item \textbf{精确率 (Precision, $P_c$)}：衡量模型预测为正类的样本中，实际为正类的比例
-    \item \textbf{召回率 (Recall, $R_c$)}：衡量实际为正类的样本中，被正确预测为正类的比例
-    \item \textbf{F1 分数 (F1-score, $F1_c$)}：精确率和召回率的调和平均，用于综合评估模型性能
-\end{itemize}
-
-其数学表达式如下：
-\begin{align}
-\text{准确率 (ACC)} &= \frac{TP + TN}{N} \label{eq:accuracy} \\
-\text{精确率 (P}_c\text{)} &= \frac{TP_c}{TP_c + FP_c} \label{eq:precision} \\
-\text{召回率 (R}_c\text{)} &= \frac{TP_c}{TP_c + FN_c} \label{eq:recall} \\
-\text{F1 分数 (F1}_c\text{)} &= 2 \cdot \frac{P_c \cdot R_c}{P_c + R_c} \label{eq:f1score}
-\end{align}
-
-其中，$TP$、$TN$ 分别表示正类和负类预测正确的样本数，$FP$、$FN$ 分别表示误判的样本数，$N$ 为总样本数。
-
 \begin{table}[H]
 \centering
 \caption{Number of the classes of the selected datasets}
@@ -365,14 +330,27 @@ $$
 \end{tabular}
 \end{table}
 
+\subsection{实验设置}
+
+\subsubsection{实验环境与参数}
+本实验在以下硬件与软件环境下进行：
+\begin{itemize}
+    \item 处理器：Intel Core i9-14900K
+    \item 显卡：NVIDIA GeForce RTX 4060 Ti，16~GB 显存
+    \item 内存：16~GB
+    \item 操作系统：Windows~10
+    \item 编程语言与框架：Python 3.10，PyTorch 2.4.0
+    \item 优化器：Adam，用于训练神经网络，加速收敛到全局最优解
+    \item 模型训练相关参数：表~\ref{tab:dfasage_parameters} 列出了详细参数设置
+\end{itemize}
 
 \begin{table}[H]
 \centering
-\caption{DFA-SAGE 模型关键参数与维度 (Key Parameters and Dimensions of the DFA-SAGE Model)}
-\label{tab:dfasage_parameters_booktabs}
+\caption{DFA-GraphSAGE 模型关键参数与维度 (Key Parameters and Dimensions of the DFA-GraphSAGE Model)}
+\label{tab:dfasage_parameters}
 \begin{tabular}{lcc}
 \toprule % 顶线
-\textbf{模块 (Module)} & \textbf{参数 (Parameter)} & \textbf{维度/值 (Value)} \\
+\textbf{模块 (Module)} & \textbf{参数 (Parameter)} & \textbf{维度/值 } \\
 \midrule % 表头线
 \textbf{输入特征 (Input Features)} & 原始边特征 ($\mathbf{e}_{uv}$) 维度 & $d_e=13$ \\
 & 初始节点特征 ($\mathbf{h}_v^0$) 维度 & $d_{e}=13$ (全一向量) \\
@@ -393,6 +371,56 @@ $$
 \end{tabular}
 \end{table}
 
+\subsubsection{评估指标}
+本文采用以下指标对模型的性能进行全面评估：
+\begin{itemize}
+    \item \textbf{准确率 (Accuracy, ACC)}：衡量分类正确的样本占总样本的比例
+    \item \textbf{精确率 (Precision, $P_c$)}：衡量模型预测为正类的样本中，实际为正类的比例
+    \item \textbf{召回率 (Recall, $R_c$)}：衡量实际为正类的样本中，被正确预测为正类的比例
+    \item \textbf{F1 分数 (F1-score, $F1_c$)}：精确率和召回率的调和平均，用于综合评估模型性能
+\end{itemize}
+
+其数学表达式如下：
+\begin{align}
+\text{准确率 (ACC)} &= \frac{TP + TN}{N} \label{eq:accuracy} \\
+\text{精确率 (P}_c\text{)} &= \frac{TP_c}{TP_c + FP_c} \label{eq:precision} \\
+\text{召回率 (R}_c\text{)} &= \frac{TP_c}{TP_c + FN_c} \label{eq:recall} \\
+\text{F1 分数 (F1}_c\text{)} &= 2 \cdot \frac{P_c \cdot R_c}{P_c + R_c} \label{eq:f1score}
+\end{align}
+
+其中，$TP$、$TN$ 分别表示正类和负类预测正确的样本数，$FP$、$FN$ 分别表示误判的样本数，$N$ 为总样本数。
+\subsection{实验结果与分析}
+
+\subsubsection{模型性能分析}
+
+Table X（请替换为表格编号，如 Table 5）展示了我们提出的 Dual-Fusion Aggregation SAGE (DFA-SAGE) 模型在 CICIoT2023 数据集上的多类别分类结果。
+
+实验结果有力地证明了 DFA-SAGE 模型在多类别入侵检测任务中表现出色，其平均准确率 (Average Accuracy) 达到了 99.XX\%。模型的平均查准率 (Precision)、查全率 (Recall) 和 F1-score 均保持在 99.X\% 附近。对于大多数类别，模型的分类性能接近完美，例如 DoS 和 Mirai 类别的 F1-scores 分别达到了 99.XX\% 和 99.XX\%。然而，针对 Recon 类别，查全率略低于其他类别，为 9X.XX\%，这可能归因于该类别数据特征的复杂性或样本分布不均。
+
+图 X（请替换为图片编号，如 Figure 5）展示了 DFA-SAGE 模型针对每个类别的 ROC 曲线。如图所示，所有类别的曲线均紧密贴近左上角，表明模型能有效地区分正负样本。图表右下角的数据显示，所有类别的 AUC 值均超过 0.9X，突显了模型在跨类别分类中优异的判别能力，充分证实了其在多类别分类任务中的高性能。
+
+图 Y（请替换为图片编号，如 Figure 6）展示了各类别对应的 PR 曲线。大多数类别展现出强大的性能，其中 Class X、Class Y 和 Class Z（请根据您的类别代号替换）的 AUC-PR 值分别达到了 1.0000、0.99XX 和 0.96XX，说明这些类别具有高查准率和高查全率。与此形成对比的是，Class A 和 Class B（请根据您的类别代号替换）的 AUC-PR 值相对较低，分别为 0.XX 和 0.XX，这可能暗示这些类别的分类性能仍有提升空间，例如存在误分类或查全率不足的问题。总体而言，尽管 DFA-SAGE 在大多数类别上性能优异，但少数类别的分类仍有改进余地。
+
+图 Z（请替换为图片编号，如 Figure 7）比较了 CICIoT2023 数据集在经过 DFA-SAGE 特征提取前后的 t-SNE 可视化效果。原始特征（左侧）在降维后类别边界模糊，某些类别存在明显的重叠，不利于有效区分。相比之下，经 DFA-SAGE 提取的特征（右侧）在各类别内形成了更紧凑的聚类，且类别间边界更加清晰，表明 DFA-SAGE 通过利用双步融合机制和自强化更新学习到了更具判别力的 GNN 特征。右侧图像中的局部聚类结构进一步证实，DFA-SAGE 在降维过程中有效地保留了利用节点-边关系所捕获的关键类别信息。
+
+\paragraph{鲁棒性优化与两阶段训练策略}
+
+在模型训练的初期探索中，我们观察到轻微的过拟合现象，推测是模型学习了过多的细节和噪声所致。为解决此问题，我们系统性地探索了三种优化策略：L2 正则化、在模型中添加 Dropout 层，以及使用调度器进行动态学习率调整（Lr-Scheduler）。实验结果（总结于 Table K，请替换为表格编号，如 Table 6）表明，Lr-Scheduler+L2 组合在权衡收敛速度、推理效率和模型尺寸方面表现最佳，因此被确定为 DFA-SAGE 第一阶段（Stage 1）训练的基础优化策略。
+
+基于此最优基础策略，为了进一步稳定训练并达到最佳泛化性能，我们采用了两阶段训练策略：
+
+\begin{enumerate}
+\item 第一阶段（Stage 1：端到端训练）： 使用 Lr-Scheduler+L2 对 DFA-SAGE 的所有参数进行训练，旨在让 DFA Layer 学习到高质量、高鲁棒性的节点嵌入$ h_v^K $。
+\item 第二阶段（Stage 2：预测器精调）： 在 GNN 嵌入稳定后，我们采取了参数冻结策略。冻结 DFA Layer 的所有参数，仅使用固定的低学习率 1e-4 精细调整特征缩放边分类器 ($W_pred$ 和 $W_edge$) 的参数。这一阶段有效地利用了稳定的图特征，专注于优化分类器的决策边界，并取得了最终的最佳性能。
+\end{enumerate}
+
+图 P（请替换为图片编号，如 Figure 8）展示了使用 Lr-Scheduler+L2 方法进行第一阶段训练时，训练集和验证集的损失曲线。随着 epochs 的增加，训练损失和验证损失趋于收敛，且验证损失没有出现明显的上升趋势，这表明该方法有效地缓解了过拟合。
+
+\paragraph{泛化性验证}
+
+为证明所提出模型强大的跨数据集鲁棒性，我们进一步使用 Edge-IIoT 和 BoT-IoT 数据集进行了验证性实验。这些实验旨在评估模型在不同 IoT 网络环境下的稳定性和可靠性。Table R（请替换为表格编号，如 Table 7）呈现了模型在三个数据集上的分类结果，而 图 Q（请替换为图片编号，如 Figure 9）展示了对应分类任务的混淆矩阵。
+
+实验结果表明，DFA-SAGE 模型在 Edge-IIoT 和 BoT-IoT 数据集上分别取得了 9X.XX\% 和 99.XX\% 的准确率，对应的 F1-scores 分别为 9X.XX\% 和 99.XX\%。在所有三个数据集上，模型的一致性表现突出，准确率、查准率、查全率和 F1-score 均接近或超过 98\%，充分展示了 DFA-SAGE 强大的跨数据集鲁棒分类能力。
 \bibliographystyle{IEEEtran}   % 或 plain, unsrt, alpha...
 \bibliography{ref}             % ref.bib
 
